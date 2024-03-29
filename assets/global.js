@@ -1273,3 +1273,161 @@ class ProductRecommendations extends HTMLElement {
 }
 
 customElements.define('product-recommendations', ProductRecommendations);
+
+class discountCart extends HTMLElement {
+  constructor() {
+    super();
+
+    const serializedArray = localStorage.getItem('discount_codes');
+    this.discountCodesArray = serializedArray ? JSON.parse(serializedArray) : [];
+    this.applyDiscountButton = this.querySelector('#apply_discount');
+    this.discountCodeField = this.querySelector('#discount_code');
+    this.discountCodeArray = this.discountCodesArray ? this.discountCodesArray : [];
+    this.discountWrapper = this.querySelector(".discount__wrapper");
+
+    if (this.discountCodesArray.length > 0 ) {
+      this.applyDiscount(true);
+    }
+
+    this.applyDiscountButton.addEventListener('click', () => this.applyDiscount());
+    this.removeDiscount = this.removeDiscount.bind(this);
+  }
+
+  applyDiscount (remItem) {
+    let discountCode = this.discountCodeField.value.trim();
+    this.discountCodeField.value = "";
+    this.discountWrapper.classList.remove("discount-error");
+    let discountCodeUnique = [];
+
+    if (discountCode || remItem ) {
+      if (remItem) {
+        discountCodeUnique = new Set(this.discountCodeArray);
+        discountCodeUnique = Array.from(discountCodeUnique)
+        discountCodeUnique = discountCodeUnique.filter(function(e) { return e !== remItem })
+        this.discountCodeArray = discountCodeUnique;
+
+        if (this.discountCodeArray.length === 0) {
+          localStorage.setItem('discount_codes', "");
+        }
+      } else {
+        this.discountCodeArray.push(discountCode);
+
+        if (this.discountCodeArray.length > 0 ) {
+          discountCodeUnique = new Set(this.discountCodeArray);
+          discountCodeUnique = Array.from(discountCodeUnique);
+          this.discountCodeArray = discountCodeUnique;
+        }
+      }
+
+      const cartToken = `gid://shopify/Cart/${document.cookie.split('; ').find(row => row.startsWith('cart=')).split('=')[1]}`;
+      const mutation = `
+        mutation cartDiscountCodesUpdate($cartId: ID!, $discountCodes: [String!]!) {
+          cartDiscountCodesUpdate(cartId: $cartId, discountCodes: $discountCodes) {
+            cart {
+              id
+              discountCodes {
+                applicable
+                code
+              }
+              cost {
+                totalAmount {
+                amount
+                currencyCode
+              }
+            }
+            discountAllocations {
+              discountedAmount {
+                amount
+                currencyCode
+              }
+            }
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }`;
+
+      const requestOptions = {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Shopify-Storefront-Access-Token': 'eddff40fe97392ee833c01eca9bb1bd7'
+        },
+        body: JSON.stringify({
+          query: mutation,
+          variables: {
+            cartId: cartToken,
+            discountCodes: discountCodeUnique
+          }
+        }),
+      };
+
+      fetch('/api/2021-10/graphql.json', requestOptions)
+        .then(response => response.json())
+        .then(data => {
+          let showSuccessMessageFlag = true;
+          let discountList = document.querySelector(".js-discount-list");
+          discountList.innerHTML= "";
+
+          if (data.data.cartDiscountCodesUpdate.userErrors.length === 0) {
+            const discountCodeStatus = data.data.cartDiscountCodesUpdate.cart.discountCodes;
+
+            discountCodeStatus.forEach(el => {
+              if (!el.applicable) {
+                this.discountWrapper.classList.add("discount-error");
+                showSuccessMessageFlag = false;
+                this.discountCodeArray = this.discountCodeArray.filter(function(e) { return e !== el.code })
+              }
+            })
+
+            if (this.discountCodeArray.length > 0) {
+              localStorage.setItem('discount_codes', JSON.stringify(this.discountCodeArray));
+
+              this.discountCodeArray.forEach(item =>{
+                discountList.innerHTML += `<span class="discount-item">${item} <span data-title="${item}">X</span></span>`;
+            })
+
+              let discountItem = document.querySelectorAll(".discount-item span");
+              discountItem.forEach(el => el.addEventListener("click", (e) => this.removeDiscount(e)));
+            }
+        }
+          this.updateCartItems(data.data.cartDiscountCodesUpdate.cart.cost.totalAmount.amount, data.data.cartDiscountCodesUpdate.cart.cost.totalAmount.currencyCode);
+      })
+      .catch(error => {
+          console.error('Error applying discount:', error);
+      });
+    }
+  }
+
+  updateCartItems (amount, currencyCode) {
+    fetch(`?section_id=main-cart-items`)
+      .then((response) => response.text())
+      .then((responseText) => {
+        const html = new DOMParser().parseFromString(responseText, 'text/html');
+        const sourceQty = html.querySelector('cart-items');
+        let cartMainWrapper = document.querySelector("cart-items");
+
+        cartMainWrapper.innerHTML = sourceQty.innerHTML;
+
+        if (amount && currencyCode) {
+          let totalPrice = document.querySelectorAll(".totals__total-value");
+          
+          totalPrice.forEach(el => {
+            const formattedAmount = Number(amount).toFixed(2);
+            el.innerHTML = `${formattedAmount} ${currencyCode}`;
+          });
+        }
+      })
+      .catch((e) => {
+        console.error(e);
+      });
+  }
+  removeDiscount (e) {
+    const itemRemove = e.currentTarget.getAttribute("data-title");
+    this.applyDiscount(itemRemove);
+  }
+}
+
+customElements.define('discount-cart', discountCart);
