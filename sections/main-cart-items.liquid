@@ -4,6 +4,7 @@
 {{ 'component-price.css' | asset_url | stylesheet_tag }}
 {{ 'component-discounts.css' | asset_url | stylesheet_tag }}
 {{ 'quantity-popover.css' | asset_url | stylesheet_tag }}
+{{ 'discount-cart.css' | asset_url | stylesheet_tag }}
 
 {%- style -%}
   .section-{{ section.id }}-padding {
@@ -450,9 +451,20 @@
   </div>
 </cart-items>
 
+<discount-cart>
+  <div class="discount-field page-width">
+    <label for="discount_code">Discount Code:</label>
+    <div class="discount__wrapper">
+      <input type="text" id="discount_code" name="discount_code">
+    </div>
+    <button type="button" class="button" id="apply_discount">Apply</button>
+  </div>
+</discount-cart>
+
 {% schema %}
 {
   "name": "t:sections.main-cart-items.name",
+  "class": "cart__main-wrapper",
   "settings": [
     {
       "type": "color_scheme",

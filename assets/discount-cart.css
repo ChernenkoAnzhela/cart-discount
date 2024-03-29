@@ -1,0 +1,71 @@
+discount-cart .discount-field .button {
+    min-width: calc(1rem + var(--buttons-border-width)* 2);
+    min-height: 2rem;
+    font-size: 10px;
+  }
+  
+  discount-cart .discount-field {
+    display: flex;
+    align-items: center;
+  }
+  
+  discount-cart .discount__wrapper {
+    display: flex;
+    flex-direction: column;
+    margin: 0 5px;
+    position: relative;
+  }
+  
+  .js-discount-list span.discount-item {
+    margin-left: 10px;
+    background: antiquewhite;
+    padding: 0 10px;
+    position: relative;
+    text-transform: uppercase;
+  }
+  
+  .js-discount-list span.discount-item span {
+    cursor: pointer;
+    position: absolute;
+    font-size: 14px;
+    top: -6px;
+    right: 1px;
+  }
+  
+  .js-discount-list span.discount-item span:hover {
+    color: brown;
+  }
+  
+  discount-cart .discount__wrapper.discount-error:after {
+    content: "Discount code is invalid";
+    position: absolute;
+    bottom: -19px;
+    color: red;
+    font-size: 12px;
+  }
+  
+  discount-cart .discount__wrapper input {
+    border: 1px solid black;
+  }
+  
+  discount-cart .discount__wrapper.discount-error input {
+    border-color: red;
+  }
+  
+  discount-cart .discount__wrapper input:focus {
+    outline-style: none;
+    box-shadow: none;
+  }
+  
+  .js-discount-list {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 15px;
+  }
+  
+  @media screen and (max-width: 768px) {
+    discount-cart .discount-field label {
+      font-size: 12px;
+      line-height: normal;
+    }
+  }  
